@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin - GL Imports CE</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&family=Manrope:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    .admin-wrap{ max-width:1000px; margin:24px auto; background:#fff; border-radius:16px; box-shadow: var(--shadow); padding:18px }
+    .admin-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px }
+    .tabs{ display:flex; gap:8px; margin-bottom:12px }
+    .tab{ padding:8px 12px; border-radius:10px; background:#f3e9f1; cursor:pointer; font-weight:700 }
+    .tab.active{ background:linear-gradient(120deg, var(--pink2), var(--pinkDark)); color:#fff }
+    .panel{ display:none }
+    .panel.active{ display:block }
+    .grid{ display:grid; gap:10px }
+    .grid-2{ grid-template-columns: repeat(2, 1fr) }
+    .grid-3{ grid-template-columns: repeat(3, 1fr) }
+    .field{ display:flex; flex-direction:column; gap:6px }
+    .field input, .field select, .field textarea { padding:10px 12px; border-radius:10px; border:1px solid #e6dbe4; outline:none }
+    .table{ width:100%; border-collapse:collapse }
+    .table th, .table td{ border-bottom:1px solid #eee; padding:8px }
+    .img-preview{ width:80px; height:60px; object-fit:cover; border-radius:8px }
+    .login-card{ max-width:420px; margin:60px auto; background:#fff; border-radius:16px; box-shadow: var(--shadow); padding:18px }
+    .login-card h2{ margin:6px 0 16px }
+  </style>
+</head>
+<body>
+  <div id="loginView" class="login-card">
+    <h2>Área Administrativa</h2>
+    <div class="field">
+      <label>E-mail</label>
+      <input id="admEmail" type="email" placeholder="admin@loja.com" />
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input id="admSenha" type="password" placeholder="••••" />
+    </div>
+    <button class="btn" onclick="doLogin()">Entrar</button>
+  </div>
+
+  <div id="adminView" class="admin-wrap" style="display:none">
+    <div class="admin-header">
+      <h2>Painel Administrativo</h2>
+      <div>
+        <a class="nav-link" href="/index.html" style="margin-right:10px">Ver site</a>
+        <button class="btn btn-light" onclick="logout()">Sair</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="prod">Produtos</div>
+      <div class="tab" data-tab="cat">Categorias</div>
+      <div class="tab" data-tab="txt">Textos do Site</div>
+    </div>
+
+    <!-- Produtos -->
+    <div id="panel-prod" class="panel active">
+      <div class="grid grid-3">
+        <div class="field">
+          <label>Nome</label>
+          <input id="pNome">
+        </div>
+        <div class="field">
+          <label>Preço (R$)</label>
+          <input id="pPreco" type="number" step="0.01">
+        </div>
+        <div class="field">
+          <label>Categoria</label>
+          <select id="pCat"></select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Descrição</label>
+        <textarea id="pDesc" rows="3"></textarea>
+      </div>
+      <div class="field">
+        <label>Imagem (upload)</label>
+        <input id="pImg" type="file" accept="image/*">
+      </div>
+      <div style="margin-top:8px">
+        <button class="btn" onclick="criarProduto()">Novo Produto</button>
+        <button class="btn btn-light" onclick="limparProduto()">Limpar</button>
+      </div>
+
+      <h3 style="margin-top:18px">Lista de Produtos</h3>
+      <table class="table" id="prodTable">
+        <thead>
+          <tr><th>Imagem</th><th>Nome</th><th>Preço</th><th>Categoria</th><th>Ações</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- Categorias -->
+    <div id="panel-cat" class="panel">
+      <div class="grid grid-2">
+        <div class="field">
+          <label>Nome</label>
+          <input id="cNome">
+        </div>
+        <div class="field">
+          <label>Slug</label>
+          <input id="cSlug" placeholder="ex: perfumes">
+        </div>
+      </div>
+      <div style="margin-top:8px">
+        <button class="btn" onclick="criarCategoria()">Nova Categoria</button>
+      </div>
+      <h3 style="margin-top:18px">Lista de Categorias</h3>
+      <table class="table" id="catTable">
+        <thead><tr><th>Nome</th><th>Slug</th><th>Ações</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- Textos do Site -->
+    <div id="panel-txt" class="panel">
+      <div class="grid grid-2">
+        <div class="field">
+          <label>Nome do site</label>
+          <input id="tSite">
+        </div>
+        <div class="field">
+          <label>Banner: título</label>
+          <input id="tBannerTxt">
+        </div>
+      </div>
+      <div class="grid grid-2">
+        <div class="field">
+          <label>Banner: informação</label>
+          <input id="tBannerInfo">
+        </div>
+        <div class="field">
+          <label>Benefício (frete)</label>
+          <input id="tFrete">
+        </div>
+      </div>
+      <div class="grid grid-2">
+        <div class="field">
+          <label>Benefício (parcelamento)</label>
+          <input id="tParc">
+        </div>
+        <div class="field">
+          <label>Benefício (PIX)</label>
+          <input id="tPix">
+        </div>
+      </div>
+      <div class="grid grid-2">
+        <div class="field">
+          <label>Instagram (URL)</label>
+          <input id="tInsta">
+        </div>
+        <div class="field">
+          <label>WhatsApp (URL)</label>
+          <input id="tWhats" placeholder="https://wa.me/55DDDNUMERO">
+        </div>
+      </div>
+      <div style="margin-top:8px">
+        <button class="btn" onclick="salvarTextos()">Salvar Textos</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="admin.js"></script>
+</body>
+</html>

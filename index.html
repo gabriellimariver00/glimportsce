@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GL Imports CE</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Google Fonts (femininas e legíveis) -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&family=Manrope:wght@400;600&display=swap" rel="stylesheet">
+  <!-- Font Awesome para ícones -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="site-header">
+    <div class="logo">GL Imports CE</div>
+    <nav class="main-nav">
+      <a href="#" data-cat="todos" class="nav-link">Todos</a>
+      <a href="#" data-cat="perfumes" class="nav-link">Perfumes</a>
+      <a href="#" data-cat="roupas" class="nav-link">Roupas</a>
+      <a href="#" data-cat="acessorios" class="nav-link">Acessórios</a>
+      <a class="nav-link" href="/admin.html">Área Admin</a>
+      <div class="cart-area" onclick="toggleCart()">
+        <i class="fa-solid fa-bag-shopping cart-icon" id="cartIcon"></i>
+        <span class="cart-badge" id="cartBadge">0</span>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Banner -->
+  <section class="hero">
+    <div class="hero-content">
+      <h1 id="bannerText">Nova coleção chegou!</h1>
+      <p id="bannerInfo">Frete grátis acima de R$199 e desconto exclusivo no PIX</p>
+      <button class="btn btn-light" onclick="scrollToProdutos()">Comprar Agora</button>
+    </div>
+  </section>
+
+  <!-- Benefícios -->
+  <section class="benefits">
+    <div class="benefit" id="benefFrete">🚚 Frete grátis acima de R$199</div>
+    <div class="benefit" id="benefParcelamento">💳 Parcelamento até 6x</div>
+    <div class="benefit" id="benefPix">💸 10% OFF no PIX</div>
+  </section>
+
+  <!-- Produtos -->
+  <section class="products-section" id="produtos">
+    <div class="section-title">
+      <h2>Produtos em Destaque</h2>
+    </div>
+    <div id="productsGrid" class="products-grid"></div>
+  </section>
+
+  <!-- Tela Ver Produto -->
+  <div id="productView" class="product-view hidden">
+    <div class="pv-card">
+      <button class="pv-close" onclick="closeProductView()"><i class="fa-solid fa-xmark"></i></button>
+      <div class="pv-img-wrap">
+        <img id="pvImg" src="" alt="">
+      </div>
+      <div class="pv-info">
+        <h3 id="pvName"></h3>
+        <p id="pvDesc"></p>
+        <div class="pv-price" id="pvPrice"></div>
+        <button class="btn" onclick="addSelectedToCart()">Adicionar ao Carrinho</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Carrinho lateral -->
+  <aside id="cartDrawer" class="cart-drawer">
+    <div class="cart-header">
+      <h3>Seu Carrinho</h3>
+      <button class="icon-btn" onclick="toggleCart()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="cartItems" class="cart-items"></div>
+    <div id="emptyCartMsg" class="empty-cart">🛒 Não há nenhum produto no carrinho.</div>
+    <div class="cart-footer">
+      <div class="cart-total"><span>Total:</span> <strong id="cartTotal">R$ 0,00</strong></div>
+      <button class="btn" onclick="openCheckout()">Finalizar Compra</button>
+    </div>
+  </aside>
+  <div id="cartBackdrop" class="backdrop" onclick="toggleCart()"></div>
+
+  <!-- Checkout -->
+  <div id="checkoutModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Finalizar Compra</h3>
+        <button class="icon-btn" onclick="closeCheckout()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <label>Forma de pagamento</label>
+        <select id="pgto">
+          <option value="">Selecione</option>
+          <option value="Pix">Pix</option>
+          <option value="Cartão">Cartão</option>
+          <option value="Dinheiro">Dinheiro</option>
+        </select>
+        <label>Nome completo</label>
+        <input id="cliNome" type="text" placeholder="Seu nome">
+        <label>Email</label>
+        <input id="cliEmail" type="email" placeholder="Seu e-mail">
+        <label>WhatsApp</label>
+        <input id="cliWhats" type="text" placeholder="(88) 9....">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-light" onclick="closeCheckout()">Cancelar</button>
+        <button class="btn" onclick="finishOnWhats()">Finalizar no WhatsApp</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast"></div>
+
+  <footer class="site-footer">
+    <p>© 2025 GL Imports CE - Todos os direitos reservados</p>
+    <div class="socials">
+      <a id="instaLink" href="#" target="_blank" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+      <a id="whatsLink" href="#" target="_blank" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
