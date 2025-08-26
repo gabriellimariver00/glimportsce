@@ -50,12 +50,12 @@ let settings = null;
 let editingId = null;
 
 // Tabs
-document.querySelectorAll('.tab').forEach(t=>{
-  t.addEventListener('click', ()=>{
-    document.querySelectorAll('.tab').forEach(x=> x.classList.remove('active'));
+document.querySelectorAll('.admin-link').forEach(link=>{
+  link.addEventListener('click', ()=>{
+    document.querySelectorAll('.admin-link').forEach(x=> x.classList.remove('active'));
     document.querySelectorAll('.panel').forEach(x=> x.classList.remove('active'));
-    t.classList.add('active');
-    document.getElementById(`panel-${t.dataset.tab}`).classList.add('active');
+    link.classList.add('active');
+    document.getElementById(`panel-${link.dataset.tab}`).classList.add('active');
   });
 });
 
@@ -72,7 +72,7 @@ async function initPanels(){
   sel.innerHTML = '';
   categories.forEach(c=>{
     const op = document.createElement('option');
-    op.value = c.slug; op.textContent = `${c.name} (${c.slug})`;
+    op.value = c.id; op.textContent = `${c.name}`;
     sel.appendChild(op);
   });
 
@@ -83,14 +83,13 @@ async function initPanels(){
   renderCategoriasTable();
 
   // Preenche textos
-  document.getElementById('tSite').value = settings.site_name || '';
-  document.getElementById('tBannerTxt').value = settings.banner_text || '';
-  document.getElementById('tBannerInfo').value = settings.banner_info || '';
-  document.getElementById('tFrete').value = settings.beneficio_frete || '';
-  document.getElementById('tParc').value = settings.beneficio_parcelamento || '';
-  document.getElementById('tPix').value = settings.beneficio_pix || '';
+  document.getElementById('tSite').value = settings.store_name || '';
+  document.getElementById('tBannerTxt').value = settings.banner_title || '';
+  document.getElementById('tBannerInfo').value = settings.banner_subtitle || '';
+  document.getElementById('tPromo').value = settings.promo_message || '';
   document.getElementById('tInsta').value = settings.instagram_url || '';
-  document.getElementById('tWhats').value = settings.whatsapp_url || '';
+  document.getElementById('tWhats').value = settings.whatsapp_number || '';
+  document.getElementById('tPay').value = settings.payment_options || '';
 }
 
 function renderProdutosTable(){
@@ -99,10 +98,10 @@ function renderProdutosTable(){
   products.forEach(p=>{
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><img class="img-preview" src="${p.image || 'https://via.placeholder.com/120x80'}" alt=""></td>
+      <td><img class="img-preview" src="${p.image_url || p.image || 'https://via.placeholder.com/120x80'}" alt=""></td>
       <td>${p.name}</td>
       <td>R$ ${p.price.toFixed(2)}</td>
-      <td>${p.category_slug}</td>
+      <td>${(categories.find(c=> c.id===p.category_id)?.name) || ''}</td>
       <td>
         <button class="btn btn-light" data-ed="${p.id}">Editar</button>
         <button class="btn" data-rm="${p.id}">Remover</button>
@@ -120,7 +119,10 @@ function limparProduto(){
   document.getElementById('pPreco').value = '';
   document.getElementById('pDesc').value = '';
   document.getElementById('pImg').value = '';
-  if (categories[0]) document.getElementById('pCat').value = categories[0].slug;
+  document.getElementById('pEstoque').value = '0';
+  document.getElementById('pDestaque').value = 'false';
+  document.getElementById('pDescPct').value = '0';
+  if (categories[0]) document.getElementById('pCat').value = String(categories[0].id);
 }
 
 function carregarProdutoForm(id){
@@ -130,8 +132,11 @@ function carregarProdutoForm(id){
   document.getElementById('pNome').value = p.name;
   document.getElementById('pPreco').value = p.price;
   document.getElementById('pDesc').value = p.description || '';
-  document.getElementById('pCat').value = p.category_slug;
-  document.getElementById('pImg').value = '';
+  document.getElementById('pCat').value = String(p.category_id);
+  document.getElementById('pImg').value = p.image_url || '';
+  document.getElementById('pEstoque').value = p.stock ?? 0;
+  document.getElementById('pDestaque').value = String(!!p.featured);
+  document.getElementById('pDescPct').value = p.discount_percent ?? 0;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -147,14 +152,14 @@ function fileToBase64(file){
 async function criarProduto(){
   const name = document.getElementById('pNome').value.trim();
   const price = parseFloat(document.getElementById('pPreco').value);
-  const category_slug = document.getElementById('pCat').value;
+  const category_id = parseInt(document.getElementById('pCat').value);
   const description = document.getElementById('pDesc').value.trim();
-  let image = null;
+  const image_url = document.getElementById('pImg').value.trim() || null;
+  const stock = parseInt(document.getElementById('pEstoque').value) || 0;
+  const featured = document.getElementById('pDestaque').value === 'true';
+  const discount_percent = parseInt(document.getElementById('pDescPct').value) || 0;
 
-  const file = document.getElementById('pImg').files[0];
-  if(file){ image = await fileToBase64(file); }
-
-  if(!name || !price || !category_slug){
+  if(!name || !price || !category_id){
     showToast('Preencha nome, preço e categoria');
     return;
   }
@@ -163,7 +168,7 @@ async function criarProduto(){
     const res = await fetch(`/api/products/${editingId}`, {
       method:'PUT',
       headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify({ name, description, price, category_slug, image })
+      body: JSON.stringify({ name, description, price, category_id, image_url, stock, featured, discount_percent })
     });
     if(res.ok){
       const upd = await res.json();
@@ -179,7 +184,7 @@ async function criarProduto(){
     const res = await fetch(`/api/products`, {
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify({ name, description, price, category_slug, image })
+      body: JSON.stringify({ name, description, price, category_id, image_url, stock, featured, discount_percent })
     });
     if(res.ok){
       products = await res.json();
@@ -212,7 +217,7 @@ function renderCategoriasTable(){
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${c.name}</td>
-      <td>${c.slug}</td>
+      <td>${c.image_url ? `<img class="img-preview" src="${c.image_url}">` : '-'}</td>
       <td>
         <button class="btn btn-light" data-ed="${c.id}">Editar</button>
         <button class="btn" data-rm="${c.id}">Remover</button>
@@ -226,17 +231,17 @@ function renderCategoriasTable(){
 
 async function criarCategoria(){
   const name = document.getElementById('cNome').value.trim();
-  const slug = document.getElementById('cSlug').value.trim();
-  if(!name || !slug){ showToast('Preencha nome e slug'); return; }
+  const image_url = document.getElementById('cImg').value.trim();
+  if(!name){ showToast('Preencha o nome'); return; }
   const res = await fetch('/api/categories', {
     method:'POST', headers:{ 'Content-Type':'application/json' },
-    body: JSON.stringify({ name, slug })
+    body: JSON.stringify({ name, image_url })
   });
   if(res.ok){
     categories = await res.json();
     renderCategoriasTable();
     document.getElementById('cNome').value = '';
-    document.getElementById('cSlug').value = '';
+    document.getElementById('cImg').value = '';
     showToast('Categoria criada!');
   } else showToast('Erro ao criar categoria');
 }
@@ -246,11 +251,10 @@ function editarCategoria(id){
   if(!c) return;
   const name = prompt('Nome da categoria:', c.name);
   if(name === null) return;
-  const slug = prompt('Slug da categoria:', c.slug);
-  if(slug === null) return;
+  const image_url = prompt('Imagem (URL):', c.image_url || '');
   fetch(`/api/categories/${id}`, {
     method:'PUT', headers:{ 'Content-Type':'application/json' },
-    body: JSON.stringify({ name, slug })
+    body: JSON.stringify({ name, image_url })
   }).then(r=> r.json()).then(rows=>{
     categories = rows;
     renderCategoriasTable();
@@ -273,14 +277,13 @@ function removerCategoria(id){
 // Textos do Site
 async function salvarTextos(){
   const payload = {
-    site_name: document.getElementById('tSite').value,
-    banner_text: document.getElementById('tBannerTxt').value,
-    banner_info: document.getElementById('tBannerInfo').value,
-    beneficio_frete: document.getElementById('tFrete').value,
-    beneficio_parcelamento: document.getElementById('tParc').value,
-    beneficio_pix: document.getElementById('tPix').value,
+    store_name: document.getElementById('tSite').value,
+    banner_title: document.getElementById('tBannerTxt').value,
+    banner_subtitle: document.getElementById('tBannerInfo').value,
+    promo_message: document.getElementById('tPromo').value,
     instagram_url: document.getElementById('tInsta').value,
-    whatsapp_url: document.getElementById('tWhats').value
+    whatsapp_number: document.getElementById('tWhats').value,
+    payment_options: document.getElementById('tPay').value
   };
   const res = await fetch('/api/settings', {
     method:'PUT',

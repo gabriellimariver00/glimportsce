@@ -14,17 +14,13 @@
   <!-- Header -->
   <header class="site-header">
     <div class="logo">GL Imports CE</div>
-    <nav class="main-nav">
-      <a href="#" data-cat="todos" class="nav-link">Todos</a>
-      <a href="#" data-cat="perfumes" class="nav-link">Perfumes</a>
-      <a href="#" data-cat="roupas" class="nav-link">Roupas</a>
-      <a href="#" data-cat="acessorios" class="nav-link">Acessórios</a>
-      <a class="nav-link" href="/admin.html">Área Admin</a>
+    <div class="header-actions">
+      <a class="icon-link" href="/admin.html" title="Admin"><i class="fa-solid fa-gear"></i></a>
       <div class="cart-area" onclick="toggleCart()">
         <i class="fa-solid fa-bag-shopping cart-icon" id="cartIcon"></i>
-        <span class="cart-badge" id="cartBadge">0</span>
+        <span class="cart-badge" id="cartBadge" style="display:none">0</span>
       </div>
-    </nav>
+    </div>
   </header>
 
   <!-- Banner -->
@@ -41,6 +37,14 @@
     <div class="benefit" id="benefFrete">🚚 Frete grátis acima de R$199</div>
     <div class="benefit" id="benefParcelamento">💳 Parcelamento até 6x</div>
     <div class="benefit" id="benefPix">💸 10% OFF no PIX</div>
+  </section>
+
+  <!-- Categorias -->
+  <section class="categories-section" id="categorias">
+    <div class="section-title">
+      <h2>Categorias</h2>
+    </div>
+    <div id="categoriesGrid" class="categories-grid"></div>
   </section>
 
   <!-- Produtos -->

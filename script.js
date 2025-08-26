@@ -1,4 +1,4 @@
-const API = ''; // mesmo domínio (servido pelo Express)
+const API = '';
 let settings = null;
 let categories = [];
 let products = [];
@@ -6,6 +6,7 @@ let currentSelected = null;
 let cart = [];
 
 const productsGrid = document.getElementById('productsGrid');
+const categoriesGrid = document.getElementById('categoriesGrid');
 const cartDrawer = document.getElementById('cartDrawer');
 const cartBackdrop = document.getElementById('cartBackdrop');
 const cartItems = document.getElementById('cartItems');
@@ -46,7 +47,7 @@ function renderProducts(list){
     const el = document.createElement('div');
     el.className = 'card';
     el.innerHTML = `
-      <img class="card-img" src="${p.image || 'https://via.placeholder.com/600x400'}" alt="${p.name}">
+      <img class="card-img" src="${p.image_url || p.image || 'https://via.placeholder.com/600x400'}" alt="${p.name}">
       <div class="card-body">
         <div class="card-title">${p.name}</div>
         <p class="card-desc">${p.description || ''}</p>
@@ -63,7 +64,7 @@ function openProduct(id){
   const p = products.find(x=> x.id === id);
   if(!p) return;
   currentSelected = p;
-  pvImg.src = p.image || 'https://via.placeholder.com/800x600';
+  pvImg.src = p.image_url || p.image || 'https://via.placeholder.com/800x600';
   pvName.textContent = p.name;
   pvDesc.textContent = p.description || '';
   pvPrice.textContent = money(p.price);
@@ -88,6 +89,7 @@ function updateCartUI(){
   if(cart.length === 0){
     emptyCartMsg.style.display = 'block';
     cartBadge.textContent = '0';
+    cartBadge.style.display = 'none';
     cartTotal.textContent = money(0);
     return;
   }
@@ -98,7 +100,7 @@ function updateCartUI(){
     const row = document.createElement('div');
     row.className = 'cart-item';
     row.innerHTML = `
-      <img src="${it.image || 'https://via.placeholder.com/100'}" alt="">
+      <img src="${it.image_url || it.image || 'https://via.placeholder.com/100'}" alt="">
       <div class="cart-item-info">
         <div style="font-weight:700">${it.name}</div>
         <div>${money(it.price)} • Qtd: ${it.qty}</div>
@@ -112,6 +114,7 @@ function updateCartUI(){
     cartItems.appendChild(row);
   });
   cartBadge.textContent = String(cart.length);
+  cartBadge.style.display = cart.length > 0 ? 'inline-block' : 'none';
   cartTotal.textContent = money(total);
 }
 
@@ -157,33 +160,47 @@ function finishOnWhats(){
 - Email: ${email}
 - WhatsApp: ${whats}`;
 
-  const url = (settings && settings.whatsapp_url) ? settings.whatsapp_url : 'https://wa.me/5588921684808';
+  const waNumber = (settings && settings.whatsapp_number) ? settings.whatsapp_number : '5588921684808';
+  const url = `https://wa.me/${waNumber}`;
   window.open(`${url}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
-function bindCategoryLinks(){
-  document.querySelectorAll('.nav-link[data-cat]').forEach(a=>{
-    a.addEventListener('click', async (e)=>{
-      e.preventDefault();
-      const cat = a.getAttribute('data-cat');
-      const data = await fetchJSON(`/api/products?category=${cat}`);
-      renderProducts(data);
+function renderCategories(list){
+  if(!categoriesGrid) return;
+  categoriesGrid.innerHTML = '';
+  list.forEach(c=>{
+    const el = document.createElement('div');
+    el.className = 'cat-card';
+    el.innerHTML = `
+      <img class="cat-img" src="${c.image_url || 'https://via.placeholder.com/400x260'}" alt="${c.name}">
+      <div class="cat-name">${c.name}</div>`;
+    el.addEventListener('click', async ()=>{
+      const data = await fetchJSON(`/api/products?category_id=${c.id}`);
+      products = data;
+      renderProducts(products);
+      document.getElementById('produtos').scrollIntoView({ behavior:'smooth' });
     });
+    categoriesGrid.appendChild(el);
   });
 }
 
 async function loadSettings(){
   settings = await fetchJSON('/api/settings');
-  document.querySelector('.logo').textContent = settings.site_name || 'GL Imports CE';
-  document.getElementById('bannerText').textContent = settings.banner_text || '';
-  document.getElementById('bannerInfo').textContent = settings.banner_info || '';
-  document.getElementById('benefFrete').textContent = settings.beneficio_frete || '';
-  document.getElementById('benefParcelamento').textContent = settings.beneficio_parcelamento || '';
-  document.getElementById('benefPix').textContent = settings.beneficio_pix || '';
+  const storeName = settings.store_name || 'GL Imports CE';
+  document.querySelector('.logo').textContent = storeName;
+  document.getElementById('bannerText').textContent = settings.banner_title || '';
+  document.getElementById('bannerInfo').textContent = settings.banner_subtitle || '';
+  document.getElementById('benefFrete').textContent = settings.promo_message || '';
   const insta = document.getElementById('instaLink');
   const whats = document.getElementById('whatsLink');
   if (settings.instagram_url) insta.href = settings.instagram_url;
-  if (settings.whatsapp_url) whats.href = settings.whatsapp_url;
+  if (settings.whatsapp_number) whats.href = `https://wa.me/${settings.whatsapp_number}`;
+}
+
+async function loadCategories(){
+  const data = await fetchJSON('/api/categories');
+  categories = data;
+  renderCategories(categories);
 }
 
 async function loadProducts(){
@@ -194,8 +211,8 @@ async function loadProducts(){
 async function boot(){
   try {
     await loadSettings();
+    await loadCategories();
     await loadProducts();
-    bindCategoryLinks();
   } catch (e) {
     console.error(e);
     showToast('Erro ao carregar a loja.');

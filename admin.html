@@ -8,20 +8,24 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&family=Manrope:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
-    .admin-wrap{ max-width:1000px; margin:24px auto; background:#fff; border-radius:16px; box-shadow: var(--shadow); padding:18px }
+    .admin-layout{ display:grid; grid-template-columns: 240px 1fr; min-height:100vh; }
+    .admin-sidebar{ background:#0f172a; color:#cbd5e1; padding:18px 14px; position:sticky; top:0; height:100vh }
+    .admin-sidebar h3{ color:#fff; margin:6px 0 16px }
+    .admin-nav{ display:flex; flex-direction:column; gap:8px }
+    .admin-link{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; color:#cbd5e1; text-decoration:none; cursor:pointer }
+    .admin-link.active, .admin-link:hover{ background:#1e293b; color:#fff }
+    .admin-content{ padding:22px; background:#f8fafc }
+    .admin-card{ background:#fff; border-radius:14px; box-shadow: var(--shadow); padding:16px }
     .admin-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px }
-    .tabs{ display:flex; gap:8px; margin-bottom:12px }
-    .tab{ padding:8px 12px; border-radius:10px; background:#f3e9f1; cursor:pointer; font-weight:700 }
-    .tab.active{ background:linear-gradient(120deg, var(--pink2), var(--pinkDark)); color:#fff }
     .panel{ display:none }
     .panel.active{ display:block }
     .grid{ display:grid; gap:10px }
     .grid-2{ grid-template-columns: repeat(2, 1fr) }
     .grid-3{ grid-template-columns: repeat(3, 1fr) }
     .field{ display:flex; flex-direction:column; gap:6px }
-    .field input, .field select, .field textarea { padding:10px 12px; border-radius:10px; border:1px solid #e6dbe4; outline:none }
+    .field input, .field select, .field textarea { padding:10px 12px; border-radius:10px; border:1px solid #e2e8f0; outline:none }
     .table{ width:100%; border-collapse:collapse }
-    .table th, .table td{ border-bottom:1px solid #eee; padding:8px }
+    .table th, .table td{ border-bottom:1px solid #e2e8f0; padding:10px; text-align:left }
     .img-preview{ width:80px; height:60px; object-fit:cover; border-radius:8px }
     .login-card{ max-width:420px; margin:60px auto; background:#fff; border-radius:16px; box-shadow: var(--shadow); padding:18px }
     .login-card h2{ margin:6px 0 16px }
@@ -41,127 +45,137 @@
     <button class="btn" onclick="doLogin()">Entrar</button>
   </div>
 
-  <div id="adminView" class="admin-wrap" style="display:none">
-    <div class="admin-header">
-      <h2>Painel Administrativo</h2>
-      <div>
-        <a class="nav-link" href="/index.html" style="margin-right:10px">Ver site</a>
-        <button class="btn btn-light" onclick="logout()">Sair</button>
-      </div>
-    </div>
+  <div id="adminView" class="admin-layout" style="display:none">
+    <aside class="admin-sidebar">
+      <h3>Admin</h3>
+      <nav class="admin-nav">
+        <div class="admin-link active" data-tab="prod"><i class="fa-solid fa-box"></i> Produtos</div>
+        <div class="admin-link" data-tab="cat"><i class="fa-solid fa-tags"></i> Categorias</div>
+        <div class="admin-link" data-tab="txt"><i class="fa-solid fa-gear"></i> Configurações</div>
+        <div style="margin-top:auto"></div>
+        <a class="admin-link" href="/index.html"><i class="fa-solid fa-globe"></i> Ver site</a>
+        <div class="admin-link" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Sair</div>
+      </nav>
+    </aside>
+    <main class="admin-content">
+      <div class="admin-card panel active" id="panel-prod">
+        <div class="admin-header">
+          <h2>Produtos</h2>
+          <div></div>
+        </div>
+        <div class="grid grid-3">
+          <div class="field">
+            <label>Nome</label>
+            <input id="pNome">
+          </div>
+          <div class="field">
+            <label>Preço (R$)</label>
+            <input id="pPreco" type="number" step="0.01">
+          </div>
+          <div class="field">
+            <label>Categoria</label>
+            <select id="pCat"></select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Descrição</label>
+          <textarea id="pDesc" rows="3"></textarea>
+        </div>
+        <div class="field">
+          <label>Imagem (URL)</label>
+          <input id="pImg" placeholder="https://...">
+        </div>
+        <div class="grid grid-3">
+          <div class="field">
+            <label>Estoque</label>
+            <input id="pEstoque" type="number" min="0" value="0">
+          </div>
+          <div class="field">
+            <label>Destaque</label>
+            <select id="pDestaque"><option value="false">Não</option><option value="true">Sim</option></select>
+          </div>
+          <div class="field">
+            <label>Desconto (%)</label>
+            <input id="pDescPct" type="number" min="0" max="90" value="0">
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <button class="btn" onclick="criarProduto()">Salvar</button>
+          <button class="btn btn-light" onclick="limparProduto()">Limpar</button>
+        </div>
 
-    <div class="tabs">
-      <div class="tab active" data-tab="prod">Produtos</div>
-      <div class="tab" data-tab="cat">Categorias</div>
-      <div class="tab" data-tab="txt">Textos do Site</div>
-    </div>
-
-    <!-- Produtos -->
-    <div id="panel-prod" class="panel active">
-      <div class="grid grid-3">
-        <div class="field">
-          <label>Nome</label>
-          <input id="pNome">
-        </div>
-        <div class="field">
-          <label>Preço (R$)</label>
-          <input id="pPreco" type="number" step="0.01">
-        </div>
-        <div class="field">
-          <label>Categoria</label>
-          <select id="pCat"></select>
-        </div>
-      </div>
-      <div class="field">
-        <label>Descrição</label>
-        <textarea id="pDesc" rows="3"></textarea>
-      </div>
-      <div class="field">
-        <label>Imagem (upload)</label>
-        <input id="pImg" type="file" accept="image/*">
-      </div>
-      <div style="margin-top:8px">
-        <button class="btn" onclick="criarProduto()">Novo Produto</button>
-        <button class="btn btn-light" onclick="limparProduto()">Limpar</button>
+        <h3 style="margin-top:18px">Lista de Produtos</h3>
+        <table class="table" id="prodTable">
+          <thead>
+            <tr><th>Imagem</th><th>Nome</th><th>Preço</th><th>Categoria</th><th>Ações</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
 
-      <h3 style="margin-top:18px">Lista de Produtos</h3>
-      <table class="table" id="prodTable">
-        <thead>
-          <tr><th>Imagem</th><th>Nome</th><th>Preço</th><th>Categoria</th><th>Ações</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
+      <div class="admin-card panel" id="panel-cat">
+        <div class="admin-header"><h2>Categorias</h2></div>
+        <div class="grid grid-2">
+          <div class="field">
+            <label>Nome</label>
+            <input id="cNome">
+          </div>
+          <div class="field">
+            <label>Imagem (URL)</label>
+            <input id="cImg" placeholder="https://...">
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <button class="btn" onclick="criarCategoria()">Nova Categoria</button>
+        </div>
+        <h3 style="margin-top:18px">Lista de Categorias</h3>
+        <table class="table" id="catTable">
+          <thead><tr><th>Nome</th><th>Imagem</th><th>Ações</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
 
-    <!-- Categorias -->
-    <div id="panel-cat" class="panel">
-      <div class="grid grid-2">
-        <div class="field">
-          <label>Nome</label>
-          <input id="cNome">
+      <div class="admin-card panel" id="panel-txt">
+        <div class="admin-header"><h2>Configurações da Loja</h2></div>
+        <div class="grid grid-2">
+          <div class="field">
+            <label>Nome da loja</label>
+            <input id="tSite">
+          </div>
+          <div class="field">
+            <label>Banner: título</label>
+            <input id="tBannerTxt">
+          </div>
+        </div>
+        <div class="grid grid-2">
+          <div class="field">
+            <label>Banner: subtítulo</label>
+            <input id="tBannerInfo">
+          </div>
+          <div class="field">
+            <label>Mensagem promocional</label>
+            <input id="tPromo">
+          </div>
+        </div>
+        <div class="grid grid-2">
+          <div class="field">
+            <label>Instagram (URL)</label>
+            <input id="tInsta">
+          </div>
+          <div class="field">
+            <label>WhatsApp (somente números, ex: 5588...)</label>
+            <input id="tWhats">
+          </div>
         </div>
         <div class="field">
-          <label>Slug</label>
-          <input id="cSlug" placeholder="ex: perfumes">
+          <label>Formas de pagamento (texto)</label>
+          <textarea id="tPay" rows="3"></textarea>
         </div>
-      </div>
-      <div style="margin-top:8px">
-        <button class="btn" onclick="criarCategoria()">Nova Categoria</button>
-      </div>
-      <h3 style="margin-top:18px">Lista de Categorias</h3>
-      <table class="table" id="catTable">
-        <thead><tr><th>Nome</th><th>Slug</th><th>Ações</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-
-    <!-- Textos do Site -->
-    <div id="panel-txt" class="panel">
-      <div class="grid grid-2">
-        <div class="field">
-          <label>Nome do site</label>
-          <input id="tSite">
-        </div>
-        <div class="field">
-          <label>Banner: título</label>
-          <input id="tBannerTxt">
-        </div>
-      </div>
-      <div class="grid grid-2">
-        <div class="field">
-          <label>Banner: informação</label>
-          <input id="tBannerInfo">
-        </div>
-        <div class="field">
-          <label>Benefício (frete)</label>
-          <input id="tFrete">
+        <div style="margin-top:8px">
+          <button class="btn" onclick="salvarTextos()">Salvar Configurações</button>
         </div>
       </div>
-      <div class="grid grid-2">
-        <div class="field">
-          <label>Benefício (parcelamento)</label>
-          <input id="tParc">
-        </div>
-        <div class="field">
-          <label>Benefício (PIX)</label>
-          <input id="tPix">
-        </div>
-      </div>
-      <div class="grid grid-2">
-        <div class="field">
-          <label>Instagram (URL)</label>
-          <input id="tInsta">
-        </div>
-        <div class="field">
-          <label>WhatsApp (URL)</label>
-          <input id="tWhats" placeholder="https://wa.me/55DDDNUMERO">
-        </div>
-      </div>
-      <div style="margin-top:8px">
-        <button class="btn" onclick="salvarTextos()">Salvar Textos</button>
-      </div>
-    </div>
+    </main>
   </div>
 
   <div id="toast" class="toast"></div>
