@@ -2,177 +2,239 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const { init, all, get, run } = require('./db');
+require('dotenv').config();
+const { createClient } = require('@supabase/supabase-js');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Admin fixo (você pode trocar depois)
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@loja.com';
-const ADMIN_PASS  = process.env.ADMIN_PASS  || '1234';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://pjahnzgqybqgvxhxlrye.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqYWhuemdxeWJxZ3Z4aHhscnllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxNjMyMTQsImV4cCI6MjA3MTczOTIxNH0.KU2Xb8AzqtvAVAsvMvoGGzIXvVZnmMxlieduYv7Oo1I';
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.warn('Supabase env vars ausentes. Defina SUPABASE_URL e SUPABASE_KEY no .env');
+}
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Middlewares
 app.use(cors());
-app.use(bodyParser.json({ limit: '10mb' })); // aceita imagens base64
+app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
-// Servir frontend
-const frontendPath = path.join(__dirname, '..', 'frontend');
-app.use(express.static(frontendPath));
+// Servir arquivos estáticos (raiz do projeto)
+app.use(express.static(path.join(__dirname)));
 
-// Rotas API
+// Rotas API com Supabase
 
-// Login simples
+// Admin login (tabela admin_users: email, password_hash)
 app.post('/api/login', async (req, res) => {
-  const { email, senha } = req.body;
-  if (email === ADMIN_EMAIL && senha === ADMIN_PASS) {
-    // token simples (apenas demonstração)
-    return res.json({ ok: true, token: 'ADMIN_TOKEN_OK' });
+  try {
+    const { email, senha } = req.body;
+    if (!email || !senha) return res.status(400).json({ ok:false, message:'Dados inválidos' });
+    const { data, error } = await supabase
+      .from('admin_users')
+      .select('id, email, password_hash')
+      .eq('email', email)
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(401).json({ ok:false, message:'Credenciais inválidas' });
+    const ok = await bcrypt.compare(String(senha), data.password_hash || '');
+    if (!ok) return res.status(401).json({ ok:false, message:'Credenciais inválidas' });
+    return res.json({ ok:true, token:'ADMIN_TOKEN_OK' });
+  } catch (e) {
+    return res.status(500).json({ ok:false, message:e.message });
   }
-  return res.status(401).json({ ok: false, message: 'Credenciais inválidas' });
 });
 
-// Settings
-app.get('/api/settings', async (req, res) => {
+// Site settings (tabela site_settings: id=1)
+app.get('/api/settings', async (_req, res) => {
   try {
-    const s = await get(`SELECT * FROM settings WHERE id = 1;`);
-    res.json(s);
+    const { data, error } = await supabase
+      .from('site_settings')
+      .select('*')
+      .eq('id', 1)
+      .maybeSingle();
+    if (error) throw error;
+    return res.json(data || {});
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: e.message });
   }
 });
 
 app.put('/api/settings', async (req, res) => {
   try {
-    const {
-      site_name, banner_text, banner_info,
-      beneficio_frete, beneficio_parcelamento, beneficio_pix,
-      instagram_url, whatsapp_url
-    } = req.body;
-
-    await run(
-      `UPDATE settings SET site_name=?, banner_text=?, banner_info=?, beneficio_frete=?, beneficio_parcelamento=?, beneficio_pix=?, instagram_url=?, whatsapp_url=? WHERE id=1`,
-      [site_name, banner_text, banner_info, beneficio_frete, beneficio_parcelamento, beneficio_pix, instagram_url, whatsapp_url]
-    );
-    const s = await get(`SELECT * FROM settings WHERE id = 1;`);
-    res.json(s);
+    const payload = {
+      store_name: req.body.store_name ?? null,
+      banner_title: req.body.banner_title ?? null,
+      banner_subtitle: req.body.banner_subtitle ?? null,
+      promo_message: req.body.promo_message ?? null,
+      instagram_url: req.body.instagram_url ?? null,
+      whatsapp_number: req.body.whatsapp_number ?? null,
+      about_text: req.body.about_text ?? null,
+      return_policy: req.body.return_policy ?? null,
+      payment_options: req.body.payment_options ?? null,
+    };
+    const { data, error } = await supabase
+      .from('site_settings')
+      .update(payload)
+      .eq('id', 1)
+      .select('*')
+      .maybeSingle();
+    if (error) throw error;
+    return res.json(data || {});
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: e.message });
   }
 });
 
 // Categorias
-app.get('/api/categories', async (req, res) => {
+app.get('/api/categories', async (_req, res) => {
   try {
-    const rows = await all(`SELECT * FROM categories ORDER BY name;`);
-    res.json(rows);
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .order('name', { ascending: true });
+    if (error) throw error;
+    return res.json(data || []);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: e.message });
   }
 });
 
 app.post('/api/categories', async (req, res) => {
   try {
-    const { name, slug } = req.body;
-    await run(`INSERT INTO categories (name, slug) VALUES (?, ?)`, [name, slug]);
-    const rows = await all(`SELECT * FROM categories ORDER BY name;`);
-    res.json(rows);
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error:'Nome é obrigatório' });
+    const { error } = await supabase
+      .from('categories')
+      .insert([{ name }]);
+    if (error) throw error;
+    const { data, error: listErr } = await supabase
+      .from('categories')
+      .select('*')
+      .order('name', { ascending: true });
+    if (listErr) throw listErr;
+    return res.json(data || []);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: e.message });
   }
 });
 
 app.put('/api/categories/:id', async (req, res) => {
   try {
-    const { name, slug } = req.body;
-    await run(`UPDATE categories SET name=?, slug=? WHERE id=?`, [name, slug, req.params.id]);
-    const rows = await all(`SELECT * FROM categories ORDER BY name;`);
-    res.json(rows);
+    const { name } = req.body;
+    const id = Number(req.params.id);
+    const { error } = await supabase
+      .from('categories')
+      .update({ name })
+      .eq('id', id);
+    if (error) throw error;
+    const { data, error: listErr } = await supabase
+      .from('categories')
+      .select('*')
+      .order('name', { ascending: true });
+    if (listErr) throw listErr;
+    return res.json(data || []);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: e.message });
   }
 });
 
 app.delete('/api/categories/:id', async (req, res) => {
   try {
-    await run(`DELETE FROM categories WHERE id=?`, [req.params.id]);
-    const rows = await all(`SELECT * FROM categories ORDER BY name;`);
-    res.json(rows);
+    const id = Number(req.params.id);
+    const { error } = await supabase
+      .from('categories')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    const { data, error: listErr } = await supabase
+      .from('categories')
+      .select('*')
+      .order('name', { ascending: true });
+    if (listErr) throw listErr;
+    return res.json(data || []);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: e.message });
   }
 });
 
 // Produtos
 app.get('/api/products', async (req, res) => {
   try {
-    const { category } = req.query;
-    let sql = `SELECT * FROM products ORDER BY id DESC`;
-    let params = [];
-    if (category && category !== 'todos') {
-      sql = `SELECT * FROM products WHERE category_slug=? ORDER BY id DESC`;
-      params = [category];
+    const { category_id } = req.query;
+    let { data, error } = await supabase.from('products').select('*');
+    if (error) throw error;
+    if (category_id && Array.isArray(data)) {
+      // filtro no app se coluna não existir no banco
+      data = data.filter(p => String(p.category_id || p.category_uuid || p.category || '') === String(category_id));
     }
-    const rows = await all(sql, params);
-    res.json(rows);
+    if (error) throw error;
+    return res.json(data || []);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: e.message });
   }
 });
 
 app.get('/api/products/:id', async (req, res) => {
   try {
-    const row = await get(`SELECT * FROM products WHERE id=?`, [req.params.id]);
-    res.json(row || {});
+    const id = Number(req.params.id);
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, name, description, price, image_url, category_id, stock, featured, discount_percent, created_at')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw error;
+    return res.json(data || {});
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: e.message });
   }
 });
 
 app.post('/api/products', async (req, res) => {
   try {
-    const { name, description, price, category_slug, image } = req.body;
-    await run(
-      `INSERT INTO products (name, description, price, category_slug, image) VALUES (?, ?, ?, ?, ?)`,
-      [name, description, price, category_slug, image || null]
-    );
-    const rows = await all(`SELECT * FROM products ORDER BY id DESC`);
-    res.json(rows);
+    const { name, description, price, image_url } = req.body;
+    if (!name || !price) return res.status(400).json({ error:'Campos obrigatórios ausentes' });
+    const insertObj = { name, description, price, image_url: image_url || null };
+    const { error } = await supabase.from('products').insert([insertObj]);
+    if (error) throw error;
+    const { data, error: listErr } = await supabase.from('products').select('*');
+    if (listErr) throw listErr;
+    return res.json(data || []);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: e.message });
   }
 });
 
 app.put('/api/products/:id', async (req, res) => {
   try {
-    const { name, description, price, category_slug, image } = req.body;
-    await run(
-      `UPDATE products SET name=?, description=?, price=?, category_slug=?, image=? WHERE id=?`,
-      [name, description, price, category_slug, image || null, req.params.id]
-    );
-    const row = await get(`SELECT * FROM products WHERE id=?`, [req.params.id]);
-    res.json(row);
+    const id = req.params.id;
+    const { name, description, price, image_url } = req.body;
+    const updateObj = { name, description, price, image_url: image_url || null };
+    const { error } = await supabase.from('products').update(updateObj).eq('id', id);
+    if (error) throw error;
+    const { data, error: oneErr } = await supabase.from('products').select('*').eq('id', id).maybeSingle();
+    if (oneErr) throw oneErr;
+    return res.json(data || {});
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: e.message });
   }
 });
 
 app.delete('/api/products/:id', async (req, res) => {
   try {
-    await run(`DELETE FROM products WHERE id=?`, [req.params.id]);
-    const rows = await all(`SELECT * FROM products ORDER BY id DESC`);
-    res.json(rows);
+    const id = req.params.id;
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) throw error;
+    const { data, error: listErr } = await supabase.from('products').select('*');
+    if (listErr) throw listErr;
+    return res.json(data || []);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: e.message });
   }
 });
 
-// Inicializa DB e inicia servidor
-init().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Servidor rodando em http://localhost:${PORT}`);
-  });
-}).catch(err => {
-  console.error('Erro ao iniciar DB', err);
-  process.exit(1);
+app.listen(PORT, () => {
+  console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
